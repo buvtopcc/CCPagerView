@@ -15,7 +15,6 @@
 		7A4716DA2445520F0030E246 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7A4716D82445520F0030E246 /* LaunchScreen.storyboard */; };
 		7A4716DD2445520F0030E246 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A4716DC2445520F0030E246 /* main.m */; };
 		7A4716ED2445528F0030E246 /* CCPagerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A4716E52445528F0030E246 /* CCPagerView.m */; };
-		7A4716EE2445528F0030E246 /* CCPagerViewDefaultCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A4716E62445528F0030E246 /* CCPagerViewDefaultCell.m */; };
 		7A4716EF2445528F0030E246 /* CCPageControl.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A4716E72445528F0030E246 /* CCPageControl.m */; };
 		7A4717032445576D0030E246 /* CustomCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A4717022445576D0030E246 /* CustomCell.m */; };
 		7A4717062445616F0030E246 /* pagerViewContainerCollectionView.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A4717052445616F0030E246 /* pagerViewContainerCollectionView.m */; };
@@ -35,10 +34,8 @@
 		7A4716DB2445520F0030E246 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7A4716DC2445520F0030E246 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		7A4716E52445528F0030E246 /* CCPagerView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CCPagerView.m; sourceTree = "<group>"; };
-		7A4716E62445528F0030E246 /* CCPagerViewDefaultCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CCPagerViewDefaultCell.m; sourceTree = "<group>"; };
 		7A4716E72445528F0030E246 /* CCPageControl.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CCPageControl.m; sourceTree = "<group>"; };
 		7A4716E82445528F0030E246 /* CCPagerView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CCPagerView.h; sourceTree = "<group>"; };
-		7A4716EA2445528F0030E246 /* CCPagerViewDefaultCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CCPagerViewDefaultCell.h; sourceTree = "<group>"; };
 		7A4716EB2445528F0030E246 /* CCPageControl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CCPageControl.h; sourceTree = "<group>"; };
 		7A4717012445576D0030E246 /* CustomCell.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CustomCell.h; sourceTree = "<group>"; };
 		7A4717022445576D0030E246 /* CustomCell.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CustomCell.m; sourceTree = "<group>"; };
@@ -98,8 +95,6 @@
 			children = (
 				7A4716E82445528F0030E246 /* CCPagerView.h */,
 				7A4716E52445528F0030E246 /* CCPagerView.m */,
-				7A4716EA2445528F0030E246 /* CCPagerViewDefaultCell.h */,
-				7A4716E62445528F0030E246 /* CCPagerViewDefaultCell.m */,
 				7A4716EB2445528F0030E246 /* CCPageControl.h */,
 				7A4716E72445528F0030E246 /* CCPageControl.m */,
 			);
@@ -187,7 +182,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7A4716EE2445528F0030E246 /* CCPagerViewDefaultCell.m in Sources */,
 				7A4716D22445520E0030E246 /* ViewController.m in Sources */,
 				7A4717062445616F0030E246 /* pagerViewContainerCollectionView.m in Sources */,
 				7A4716CC2445520E0030E246 /* AppDelegate.m in Sources */,

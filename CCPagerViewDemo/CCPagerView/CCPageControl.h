@@ -18,12 +18,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) BOOL hidesForSinglePage;          // hide the the indicator if there is only one page. default is YES
 
 @property (nonatomic, assign) CGFloat pageIndicatorSpaing;
-@property (nonatomic, assign) UIEdgeInsets contentInset; // center will ignore this
-@property (nonatomic, assign, readonly) CGSize contentSize; // real content size
-
-// override super
-//@property (nonatomic, assign) UIControlContentVerticalAlignment contentVerticalAlignment;     // how to position content vertically inside control. default is center
-//@property (nonatomic, assign) UIControlContentHorizontalAlignment contentHorizontalAlignment; // how to position content hozontally inside control. default is center
+@property (nonatomic, assign) UIEdgeInsets contentInset;        // center will ignore this
+@property (nonatomic, assign, readonly) CGSize contentSize;     // real content size
 
 // indicatorTint color
 @property (nullable, nonatomic, strong) UIColor *pageIndicatorTintColor;
@@ -35,13 +31,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, assign) UIViewContentMode indicatorImageContentMode; // default is UIViewContentModeCenter
 
-@property (nonatomic, assign) CGSize pageIndicatorSize; // indicator size
-@property (nonatomic, assign) CGSize currentPageIndicatorSize; // default pageIndicatorSize
+@property (nonatomic, assign) CGSize pageIndicatorSize;         // indicator size
+@property (nonatomic, assign) CGSize currentPageIndicatorSize;  // default pageIndicatorSize
 
-@property (nonatomic, assign) CGFloat animateDuring; // default 0.3
+@property (nonatomic, assign) CGFloat animateDuring;            // default 0.3
 
 - (void)setCurrentPage:(NSInteger)currentPage animate:(BOOL)animate;
-
 
 @end
 

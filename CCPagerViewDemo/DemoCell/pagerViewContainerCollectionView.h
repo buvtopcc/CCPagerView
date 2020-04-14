@@ -14,7 +14,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, strong) NSArray *images;
 
-- (void)setIsStartAutoScroll:(BOOL)start;
+- (void)cellWillAppear;
+- (void)cellWillDisappear;
 
 @end
 

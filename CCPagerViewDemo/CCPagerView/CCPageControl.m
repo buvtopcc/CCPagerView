@@ -42,9 +42,9 @@
     _hidesForSinglePage = YES;
     _forceUpdate = NO;
     _animateDuring = 0.3;
-    _pageIndicatorSpaing = 10;
+    _pageIndicatorSpaing = 4;
     _indicatorImageContentMode = UIViewContentModeCenter;
-    _pageIndicatorSize = CGSizeMake(6,6);
+    _pageIndicatorSize = CGSizeMake(4, 4);
     _currentPageIndicatorSize = _pageIndicatorSize;
     _pageIndicatorTintColor = [[UIColor whiteColor] colorWithAlphaComponent:0.3];
     _currentPageIndicatorTintColor = [UIColor whiteColor];

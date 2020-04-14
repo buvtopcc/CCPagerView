@@ -7,10 +7,11 @@
 //
 
 #import "CCPagerView.h"
-#import "CCPagerViewDefaultCell.h"
 #import "CCPageControl.h"
 
-#define kInitialPageControlDotSize CGSizeMake(4, 4)
+// 重复的倍数（必须为偶数，才能够使初始设定0.5 * totolItemsCount在第一个cell上）
+static NSUInteger const kCellRepeatRatio = 1000;
+static NSString * const kCellReuseIndentifier = @"CCPagerViewCell";
 
 @interface UIView (CCPagerExt)
 
@@ -21,7 +22,7 @@
 
 @implementation UIView (CCPagerExt)
 
--(CGFloat)ccp_width
+- (CGFloat)ccp_width
 {
     return CGRectGetWidth(self.bounds);
 }
@@ -37,7 +38,7 @@
 
 @property (nonatomic, weak) UICollectionView *mainView; // 显示图片的collectionView
 @property (nonatomic, weak) UICollectionViewFlowLayout *flowLayout;
-@property (nonatomic, strong) NSArray *imagePathsGroup;
+@property (nonatomic, assign) NSUInteger realNumberOfCells;
 @property (nonatomic, weak) NSTimer *timer;
 @property (nonatomic, assign) NSInteger totalItemsCount;
 @property (nonatomic, weak) UIControl *pageControl;
@@ -68,20 +69,14 @@
 {
     _pageControlAligment = CCPagerViewControlAligmentLeft;
     _autoScrollTimeInterval = 3.0;
-    _titleLabelTextColor = [UIColor whiteColor];
-    _titleLabelTextFont= [UIFont systemFontOfSize:14];
-    _titleLabelBackgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:0.5];
-    _titleLabelHeight = 30;
-    _titleLabelTextAlignment = NSTextAlignmentLeft;
     _autoScroll = YES;
     _infiniteLoop = YES;
     _showPageControl = YES;
-    _pageControlDotSize = kInitialPageControlDotSize;
-    _pageControlStyle = CCPagerViewControlStyleClassic;
+    _pageControlDotSize = CGSizeMake(4, 4);
+    _pageControlStyle = CCPagerViewControlStyleCustom;
     _hidesForSinglePage = YES;
     _currentPageDotColor = [UIColor whiteColor];
     _pageDotColor = [UIColor lightGrayColor];
-    _bannerImageViewContentMode = UIViewContentModeScaleToFill;
     self.backgroundColor = [UIColor lightGrayColor];
     
 }
@@ -106,8 +101,6 @@
     mainView.pagingEnabled = YES;
     mainView.showsHorizontalScrollIndicator = NO;
     mainView.showsVerticalScrollIndicator = NO;
-    NSString *identifier = [CCPagerViewDefaultCell identifier];
-    [mainView registerClass:[CCPagerViewDefaultCell class] forCellWithReuseIdentifier:identifier];
     
     mainView.dataSource = self;
     mainView.delegate = self;
@@ -122,15 +115,14 @@
 - (void)setDelegate:(id<CCPagerViewDelegate>)delegate
 {
     _delegate = delegate;
-    NSString *identifier = [CCPagerViewDefaultCell identifier];
-    if ([self.delegate respondsToSelector:@selector(customCollectionViewCellClassForPagerView:)] &&
-        [self.delegate customCollectionViewCellClassForPagerView:self]) {
-        [self.mainView registerClass:[self.delegate customCollectionViewCellClassForPagerView:self]
-          forCellWithReuseIdentifier:identifier];
-    }else if ([self.delegate respondsToSelector:@selector(customCollectionViewCellNibForPagerView:)] &&
-              [self.delegate customCollectionViewCellNibForPagerView:self]) {
-        [self.mainView registerNib:[self.delegate customCollectionViewCellNibForPagerView:self]
-        forCellWithReuseIdentifier:identifier];
+    if ([self.delegate respondsToSelector:@selector(pagerViewCellClass:)] &&
+        [self.delegate pagerViewCellClass:self]) {
+        [self.mainView registerClass:[self.delegate pagerViewCellClass:self]
+          forCellWithReuseIdentifier:kCellReuseIndentifier];
+    } else if ([self.delegate respondsToSelector:@selector(pagerViewCellNib:)] &&
+              [self.delegate pagerViewCellNib:self]) {
+        [self.mainView registerNib:[self.delegate pagerViewCellNib:self]
+        forCellWithReuseIdentifier:kCellReuseIndentifier];
     }
 }
 
@@ -183,51 +175,26 @@
 {
     _pageDotColor = pageDotColor;
     
-    if ([self.pageControl isKindOfClass:[UIPageControl class]]) {
+    if ([self.pageControl isKindOfClass:[CCPageControl class]]) {
+        CCPageControl *pageControl = (CCPageControl *)_pageControl;
+        pageControl.pageIndicatorTintColor = pageDotColor;
+    } else {
         UIPageControl *pageControl = (UIPageControl *)_pageControl;
         pageControl.pageIndicatorTintColor = pageDotColor;
     }
-}
-
-- (void)setCurrentPageDotImage:(UIImage *)currentPageDotImage
-{
-    _currentPageDotImage = currentPageDotImage;
-    
-    if (self.pageControlStyle != CCPagerViewControlStyleCustom) {
-        self.pageControlStyle = CCPagerViewControlStyleCustom;
-    }
-    
-    [self setCustomPageControlDotImage:currentPageDotImage isCurrentPageDot:YES];
-}
-
-- (void)setPageDotImage:(UIImage *)pageDotImage
-{
-    _pageDotImage = pageDotImage;
-    
-    if (self.pageControlStyle != CCPagerViewControlStyleCustom) {
-        self.pageControlStyle = CCPagerViewControlStyleCustom;
-    }
-    
-    [self setCustomPageControlDotImage:pageDotImage isCurrentPageDot:NO];
-}
-
-- (void)setCustomPageControlDotImage:(UIImage *)image isCurrentPageDot:(BOOL)isCurrentPageDot
-{
-    if (!image || !self.pageControl) return;
-    // TODO 未实现
-    NSAssert(NO, @"not aviable now.");
 }
 
 - (void)setInfiniteLoop:(BOOL)infiniteLoop
 {
     _infiniteLoop = infiniteLoop;
     
-    if (self.imagePathsGroup.count) {
-        self.imagePathsGroup = self.imagePathsGroup;
+    if (self.realNumberOfCells) {
+        [self reloadData];
     }
 }
 
--(void)setAutoScroll:(BOOL)autoScroll{
+- (void)setAutoScroll:(BOOL)autoScroll
+{
     _autoScroll = autoScroll;
     
     [self invalidateTimer];
@@ -258,15 +225,18 @@
     [self setupPageControl];
 }
 
-- (void)setImagePathsGroup:(NSArray *)imagePathsGroup
+- (void)reloadData
 {
     [self invalidateTimer];
     
-    _imagePathsGroup = imagePathsGroup;
+    _realNumberOfCells = 0;
+    if (_delegate && [_delegate respondsToSelector:@selector(numberOfPagerViewCell:)]) {
+        _realNumberOfCells = [_delegate numberOfPagerViewCell:self];
+    }
     
-    _totalItemsCount = self.infiniteLoop ? self.imagePathsGroup.count * 1000 : self.imagePathsGroup.count;
+    _totalItemsCount = self.infiniteLoop ? self.realNumberOfCells * kCellRepeatRatio : self.realNumberOfCells;
     
-    if (imagePathsGroup.count > 1) {
+    if (self.realNumberOfCells > 1) {
         self.mainView.scrollEnabled = YES;
         [self setAutoScroll:self.autoScroll];
     } else {
@@ -278,46 +248,23 @@
     [self.mainView reloadData];
 }
 
-- (void)setImageURLStringsGroup:(NSArray *)imageURLStringsGroup
+- (void)startAutoScroll
 {
-    _imageURLStringsGroup = imageURLStringsGroup;
-    
-    NSMutableArray *temp = [NSMutableArray new];
-    [_imageURLStringsGroup enumerateObjectsUsingBlock:^(NSString * obj, NSUInteger idx, BOOL * stop) {
-        NSString *urlString;
-        if ([obj isKindOfClass:[NSString class]]) {
-            urlString = obj;
-        } else if ([obj isKindOfClass:[NSURL class]]) {
-            NSURL *url = (NSURL *)obj;
-            urlString = [url absoluteString];
-        }
-        if (urlString) {
-            [temp addObject:urlString];
-        }
-    }];
-    self.imagePathsGroup = [temp copy];
-}
-
-- (void)setLocalizationImageNamesGroup:(NSArray *)localizationImageNamesGroup
-{
-    _localizationImageNamesGroup = localizationImageNamesGroup;
-    self.imagePathsGroup = [localizationImageNamesGroup copy];
-}
-
-- (void)setTitlesGroup:(NSArray *)titlesGroup
-{
-    _titlesGroup = titlesGroup;
-    if (self.onlyDisplayText) {
-        NSMutableArray *temp = [NSMutableArray new];
-        for (int i = 0; i < _titlesGroup.count; i++) {
-            [temp addObject:@""];
-        }
-        self.backgroundColor = [UIColor clearColor];
-        self.imageURLStringsGroup = [temp copy];
+    if (!self.autoScroll) {
+        self.autoScroll = YES;
     }
 }
 
-- (void)disableScrollGesture {
+- (void)stopAutoScroll
+{
+    if (self.autoScroll) {
+        self.autoScroll = NO;
+        [self centerOfVisibleAreaAsFar]; // 尽可能的将当前显示的区域调整到中央
+    }
+}
+
+- (void)disableScrollGesture
+{
     self.mainView.canCancelContentTouches = NO;
     for (UIGestureRecognizer *gesture in self.mainView.gestureRecognizers) {
         if ([gesture isKindOfClass:[UIPanGestureRecognizer class]]) {
@@ -332,7 +279,8 @@
 {
     [self invalidateTimer]; // 创建定时器前先停止定时器，不然会出现僵尸定时器，导致轮播频率错误
     
-    NSTimer *timer = [NSTimer scheduledTimerWithTimeInterval:self.autoScrollTimeInterval target:self selector:@selector(automaticScroll) userInfo:nil repeats:YES];
+    NSTimer *timer = [NSTimer scheduledTimerWithTimeInterval:self.autoScrollTimeInterval target:self
+                                                    selector:@selector(automaticScroll) userInfo:nil repeats:YES];
     _timer = timer;
     [[NSRunLoop mainRunLoop] addTimer:timer forMode:NSRunLoopCommonModes];
 }
@@ -345,31 +293,34 @@
 
 - (void)setupPageControl
 {
-    if (_pageControl) [_pageControl removeFromSuperview]; // 重新加载数据时调整
+    if (_pageControl) {
+         [_pageControl removeFromSuperview];
+    } // 重新加载数据时调整
     
-    if (self.imagePathsGroup.count == 0 || self.onlyDisplayText) return;
+    if (self.realNumberOfCells == 0) {
+         return;
+    }
     
-    if ((self.imagePathsGroup.count == 1) && self.hidesForSinglePage) return;
+    if ((self.realNumberOfCells == 1) && self.hidesForSinglePage) {
+         return;
+    }
     
     int indexOnPageControl = [self pageControlIndexWithCurrentCellIndex:[self currentIndex]];
     
     switch (self.pageControlStyle) {
-        case CCPagerViewControlStyleCustom:
-        {
+        case CCPagerViewControlStyleCustom: {
             CCPageControl *pageControl = [[CCPageControl alloc] init];
             pageControl.contentHorizontalAlignment = UIControlContentHorizontalAlignmentLeft;
-            pageControl.pageIndicatorSpaing = 4;
-            pageControl.numberOfPages = self.imagePathsGroup.count;
+            pageControl.numberOfPages = self.realNumberOfCells;
             pageControl.currentPage = indexOnPageControl;
             [self addSubview:pageControl];
             _pageControl = pageControl;
         }
             break;
             
-        case CCPagerViewControlStyleClassic:
-        {
+        case CCPagerViewControlStyleClassic: {
             UIPageControl *pageControl = [[UIPageControl alloc] init];
-            pageControl.numberOfPages = self.imagePathsGroup.count;
+            pageControl.numberOfPages = self.realNumberOfCells;
             pageControl.currentPageIndicatorTintColor = self.currentPageDotColor;
             pageControl.pageIndicatorTintColor = self.pageDotColor;
             pageControl.userInteractionEnabled = NO;
@@ -382,20 +333,14 @@
         default:
             break;
     }
-    
-    // 重设pagecontroldot图片
-    if (self.currentPageDotImage) {
-        self.currentPageDotImage = self.currentPageDotImage;
-    }
-    if (self.pageDotImage) {
-        self.pageDotImage = self.pageDotImage;
-    }
 }
 
 
 - (void)automaticScroll
 {
-    if (0 == _totalItemsCount) return;
+    if (0 == _totalItemsCount) {
+         return;
+    }
     int currentIndex = [self currentIndex];
     int targetIndex = currentIndex + 1;
     [self scrollToIndex:targetIndex];
@@ -403,14 +348,40 @@
 
 - (void)scrollToIndex:(int)targetIndex
 {
+    /// Example repeat:10, realCnt:3, init ⬆️ pos at .
+    ///  0   1   2   3   4  .5   6   7   8   9
+    /// xxx xxx xxx xxx xxx xxx xxx xxx xxx xxx
     if (targetIndex >= _totalItemsCount) {
         if (self.infiniteLoop) {
             targetIndex = _totalItemsCount * 0.5;
-            [_mainView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:targetIndex inSection:0] atScrollPosition:UICollectionViewScrollPositionNone animated:NO];
+            [_mainView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:targetIndex inSection:0]
+                              atScrollPosition:UICollectionViewScrollPositionNone animated:NO];
         }
         return;
     }
-    [_mainView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:targetIndex inSection:0] atScrollPosition:UICollectionViewScrollPositionNone animated:YES];
+    [_mainView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:targetIndex inSection:0]
+                      atScrollPosition:UICollectionViewScrollPositionNone animated:YES];
+}
+
+- (void)centerOfVisibleAreaAsFar
+{
+// Example kCellRepeatRatio:10, realCnt:3
+// ▶️：表示当前显示在屏幕中的cell
+// pos:  0   1   2   3   4  .5   6   7   8   9
+//      xxx xxx xxx xxx xxx xxx xxx xxx xxx xxx
+//                                      ▶️
+// 作用：将当前显示在屏幕中的cell，调整到中央位置，如下位置：
+//                          ▶️
+// 尽量降低触及到边界的可能性，如果不加这个处理
+// 当前pagerView如果手动滑动的次数超过realCnt * kCellRepeatRatio * 0.5次，则会出现不能滑动情况
+    
+    NSUInteger targetIndex = _totalItemsCount * 0.5 + [self pageControlIndexWithCurrentCellIndex:[self currentIndex]];
+    if (targetIndex != [self currentIndex]) {
+        NSLog(@"centerVisibleAreaAsFar %@ to %@", @([self currentIndex]), @(targetIndex));
+        [_mainView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:targetIndex inSection:0]
+                                 atScrollPosition:UICollectionViewScrollPositionNone animated:NO];
+        [self updatePageControlIndicatorPosition];
+    }
 }
 
 - (int)currentIndex
@@ -431,7 +402,7 @@
 
 - (int)pageControlIndexWithCurrentCellIndex:(NSInteger)index
 {
-    return (int)index % self.imagePathsGroup.count;
+    return (int)index % self.realNumberOfCells;
 }
 
 #pragma mark - life circles
@@ -445,28 +416,23 @@
     _flowLayout.itemSize = self.frame.size;
     
     _mainView.frame = self.bounds;
-    if (_mainView.contentOffset.x == 0 &&  _totalItemsCount) {
+    if (_mainView.contentOffset.x == 0 &&  _totalItemsCount) { // xxx xxx xxx xxx
         int targetIndex = 0;
         if (self.infiniteLoop) {
             targetIndex = _totalItemsCount * 0.5;
-        }else{
+        } else {
             targetIndex = 0;
         }
-        [_mainView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:targetIndex inSection:0] atScrollPosition:UICollectionViewScrollPositionNone animated:NO];
+        [_mainView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:targetIndex inSection:0]
+                          atScrollPosition:UICollectionViewScrollPositionNone animated:NO];
     }
     
     CGSize size = CGSizeZero;
     if ([self.pageControl isKindOfClass:[CCPageControl class]]) {
-        CCPageControl *pageControl = (CCPageControl *)_pageControl;
-        if (!(self.pageDotImage && self.currentPageDotImage &&
-              CGSizeEqualToSize(kInitialPageControlDotSize, self.pageControlDotSize))) {
-            pageControl.currentPageIndicatorSize = self.pageControlDotSize;
-            pageControl.pageIndicatorSize = self.pageControlDotSize;
-        }
-//        size = [pageControl sizeForNumberOfPages:self.imagePathsGroup.count];
         size = CGSizeMake(self.ccp_width - 2 * 6, 12);
     } else {
-        size = CGSizeMake(self.imagePathsGroup.count * self.pageControlDotSize.width * 1.5, self.pageControlDotSize.height);
+        size = CGSizeMake(self.realNumberOfCells * self.pageControlDotSize.width * 1.5,
+                          self.pageControlDotSize.height);
     }
     CGFloat x;
     if (self.pageControlAligment == CCPagerViewControlAligmentRight) {
@@ -497,7 +463,8 @@
 }
 
 //解决当timer释放后 回调scrollViewDidScroll时访问野指针导致崩溃
-- (void)dealloc {
+- (void)dealloc
+{
     _mainView.delegate = nil;
     _mainView.dataSource = nil;
 }
@@ -508,7 +475,8 @@
 {
     long targetIndex = [self currentIndex];
     if (targetIndex < _totalItemsCount) {
-        [_mainView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:targetIndex inSection:0] atScrollPosition:UICollectionViewScrollPositionNone animated:NO];
+        [_mainView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:targetIndex inSection:0]
+                          atScrollPosition:UICollectionViewScrollPositionNone animated:NO];
     }
 }
 
@@ -523,55 +491,20 @@
 - (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView
                   cellForItemAtIndexPath:(NSIndexPath *)indexPath
 {
-    CCPagerViewDefaultCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:
-                                    [CCPagerViewDefaultCell identifier] forIndexPath:indexPath];
+    UICollectionViewCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:
+                                    kCellReuseIndentifier forIndexPath:indexPath];
     
     long itemIndex = [self pageControlIndexWithCurrentCellIndex:indexPath.item];
     
-    if ([self.delegate respondsToSelector:@selector(configCustomCell:forIndex:pagerView:)] &&
-        [self.delegate respondsToSelector:@selector(customCollectionViewCellClassForPagerView:)] && [self.delegate customCollectionViewCellClassForPagerView:self]) {
-        [self.delegate configCustomCell:cell forIndex:itemIndex pagerView:self];
+    if ([self.delegate respondsToSelector:@selector(configCell:forIndex:pagerView:)] &&
+        [self.delegate respondsToSelector:@selector(pagerViewCellClass:)] && [self.delegate pagerViewCellClass:self]) {
+        [self.delegate configCell:cell forIndex:itemIndex pagerView:self];
         return cell;
-    }else if ([self.delegate respondsToSelector:@selector(configCustomCell:forIndex:pagerView:)] &&
-              [self.delegate respondsToSelector:@selector(customCollectionViewCellNibForPagerView:)] && [self.delegate customCollectionViewCellNibForPagerView:self]) {
-        [self.delegate configCustomCell:cell forIndex:itemIndex pagerView:self];
+    } else if ([self.delegate respondsToSelector:@selector(configCell:forIndex:pagerView:)] &&
+              [self.delegate respondsToSelector:@selector(pagerViewCellNib:)] && [self.delegate pagerViewCellNib:self]) {
+        [self.delegate configCell:cell forIndex:itemIndex pagerView:self];
         return cell;
     }
-    
-    NSString *imagePath = self.imagePathsGroup[itemIndex];
-    
-    if (!self.onlyDisplayText && [imagePath isKindOfClass:[NSString class]]) {
-        if ([imagePath hasPrefix:@"http"]) { // TODO：需要优化，不能用这种阻塞式加载方式
-            NSURL *url = [NSURL URLWithString:imagePath];// 获取的图片地址
-            UIImage *image = [UIImage imageWithData: [NSData dataWithContentsOfURL:url]];
-            cell.imageView.image = image;
-        } else {
-            UIImage *image = [UIImage imageNamed:imagePath];
-            if (!image) {
-                image = [UIImage imageWithContentsOfFile:imagePath];
-            }
-            cell.imageView.image = image;
-        }
-    } else if (!self.onlyDisplayText && [imagePath isKindOfClass:[UIImage class]]) {
-        cell.imageView.image = (UIImage *)imagePath;
-    }
-    
-    if (_titlesGroup.count && itemIndex < _titlesGroup.count) {
-        cell.title = _titlesGroup[itemIndex];
-    }
-    
-    if (!cell.hasConfigured) {
-        cell.titleLabelBackgroundColor = self.titleLabelBackgroundColor;
-        cell.titleLabelHeight = self.titleLabelHeight;
-        cell.titleLabelTextAlignment = self.titleLabelTextAlignment;
-        cell.titleLabelTextColor = self.titleLabelTextColor;
-        cell.titleLabelTextFont = self.titleLabelTextFont;
-        cell.hasConfigured = YES;
-        cell.imageView.contentMode = self.bannerImageViewContentMode;
-        cell.clipsToBounds = YES;
-        cell.onlyDisplayText = self.onlyDisplayText;
-    }
-    
     return cell;
 }
 
@@ -590,10 +523,18 @@
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView
 {
-    if (!self.imagePathsGroup.count) return; // 解决清除timer时偶尔会出现的问题
+    if (!self.realNumberOfCells) {
+         return;
+    }
+    // 解决清除timer时偶尔会出现的问题
+    [self updatePageControlIndicatorPosition];
+}
+
+- (void)updatePageControlIndicatorPosition
+{
     int itemIndex = [self currentIndex];
     int indexOnPageControl = [self pageControlIndexWithCurrentCellIndex:itemIndex];
-    
+       
     if ([self.pageControl isKindOfClass:[CCPageControl class]]) {
         CCPageControl *pageControl = (CCPageControl *)_pageControl;
         pageControl.currentPage = indexOnPageControl;
@@ -624,7 +565,9 @@
 
 - (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView
 {
-    if (!self.imagePathsGroup.count) return; // 解决清除timer时偶尔会出现的问题
+    if (!self.realNumberOfCells) {
+         return;
+    } // 解决清除timer时偶尔会出现的问题
     int itemIndex = [self currentIndex];
     int indexOnPageControl = [self pageControlIndexWithCurrentCellIndex:itemIndex];
     
@@ -635,11 +578,14 @@
     }
 }
 
-- (void)makeScrollViewScrollToIndex:(NSInteger)index{
+- (void)makeScrollViewScrollToIndex:(NSInteger)index
+{
     if (self.autoScroll) {
         [self invalidateTimer];
     }
-    if (0 == _totalItemsCount) return;
+    if (0 == _totalItemsCount) {
+         return;
+    }
     
     [self scrollToIndex:(int)(_totalItemsCount * 0.5 + index)];
     

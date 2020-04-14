@@ -33,11 +33,11 @@
     CGRect rect = CGRectMake(10, 80, w - 20, 180);
     CCPagerView *pageView = [CCPagerView pagerViewWithFrame:rect placeholderImage:[UIImage imageNamed:@"placeholder"]];
     pageView.delegate = self;
-    pageView.pageControlAligment = CCPagerViewControlAligmentLeft;
-    pageView.pageControlStyle = CCPagerViewControlStyleCustom;
-    pageView.currentPageDotColor = [UIColor whiteColor]; // 自定义分页控件小圆标颜色
-    pageView.autoScrollTimeInterval = 3;
-    pageView.pageControlDotSize = CGSizeMake(4, 4);
+//    pageView.pageControlAligment = CCPagerViewControlAligmentLeft;
+//    pageView.pageControlStyle = CCPagerViewControlStyleCustom;
+//    pageView.currentPageDotColor = [UIColor whiteColor]; // 自定义分页控件小圆标颜色
+//    pageView.autoScrollTimeInterval = 3;
+//    pageView.pageControlDotSize = CGSizeMake(4, 4);
     pageView.layer.masksToBounds = YES;
     pageView.layer.cornerRadius = 5;
     [self addSubview:pageView];
@@ -53,12 +53,17 @@
 - (void)setImages:(NSArray *)images
 {
     _images = images;
-    _pagerView.localizationImageNamesGroup = images;
+    [_pagerView reloadData];
 }
 
-- (void)setIsStartAutoScroll:(BOOL)start
+- (void)cellWillAppear
 {
-    _pagerView.autoScroll = start;
+    [_pagerView startAutoScroll];
+}
+
+- (void)cellWillDisappear
+{
+    [_pagerView stopAutoScroll];
 }
 
 - (void)pagerView:(CCPagerView *)cycleScrollView didSelectItemAtIndex:(NSInteger)index
@@ -74,15 +79,29 @@
     
 }
 
-- (Class)customCollectionViewCellClassForPagerView:(CCPagerView *)view
+- (Class)pagerViewCellClass:(CCPagerView *)view
 {
     return [CustomCell class];
 }
 
-- (void)configCustomCell:(UICollectionViewCell *)cell forIndex:(NSInteger)index pagerView:(CCPagerView *)view
+- (void)configCell:(UICollectionViewCell *)cell forIndex:(NSInteger)index pagerView:(CCPagerView *)view
 {
     CustomCell *myCell = (CustomCell *)cell;
-    myCell.imageView.image = [UIImage imageNamed:_images[index]];
+    
+    NSString *imageUrl = _images[index];
+    if ([imageUrl hasPrefix:@"http"]) {
+        // TODO: AFNetWorking
+        NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:self->_images[index]]];
+        UIImage *image = [[UIImage alloc] initWithData:data];
+        myCell.imageView.image = image;
+    } else { // 本地图片
+        myCell.imageView.image = [UIImage imageNamed:_images[index]];
+    }
+}
+
+- (NSUInteger)numberOfPagerViewCell:(CCPagerView *)pagerView
+{
+    return [_images count];
 }
 
 @end
