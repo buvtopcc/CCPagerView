@@ -58,12 +58,12 @@
 
 - (void)cellWillAppear
 {
-    [_pagerView startAutoScroll];
+    [_pagerView resumeScroll];
 }
 
 - (void)cellWillDisappear
 {
-    [_pagerView stopAutoScroll];
+    [_pagerView pauseScroll];
 }
 
 - (void)pagerView:(CCPagerView *)cycleScrollView didSelectItemAtIndex:(NSInteger)index

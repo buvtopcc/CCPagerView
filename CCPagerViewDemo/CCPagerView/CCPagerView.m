@@ -248,14 +248,14 @@ static NSString * const kCellReuseIndentifier = @"CCPagerViewCell";
     [self.mainView reloadData];
 }
 
-- (void)startAutoScroll
+- (void)resumeScroll
 {
     if (!self.autoScroll) {
         self.autoScroll = YES;
     }
 }
 
-- (void)stopAutoScroll
+- (void)pauseScroll
 {
     if (self.autoScroll) {
         self.autoScroll = NO;
@@ -369,11 +369,12 @@ static NSString * const kCellReuseIndentifier = @"CCPagerViewCell";
 // ▶️：表示当前显示在屏幕中的cell
 // pos:  0   1   2   3   4  .5   6   7   8   9
 //      xxx xxx xxx xxx xxx xxx xxx xxx xxx xxx
+// 假设当前显示在，如下位置：
 //                                      ▶️
-// 作用：将当前显示在屏幕中的cell，调整到中央位置，如下位置：
+// 调整到中央位置，如下位置：
 //                          ▶️
-// 尽量降低触及到边界的可能性，如果不加这个处理
-// 当前pagerView如果手动滑动的次数超过realCnt * kCellRepeatRatio * 0.5次，则会出现不能滑动情况
+// 尽量降低触及到边界的可能性，如果不加这个处理 当前pagerView如果快速滑动的次数超过realCnt * kCellRepeatRatio * 0.5
+// 则会出现不能滑动情况
     
     NSUInteger targetIndex = _totalItemsCount * 0.5 + [self pageControlIndexWithCurrentCellIndex:[self currentIndex]];
     if (targetIndex != [self currentIndex]) {

@@ -95,8 +95,8 @@ typedef NS_ENUM(NSUInteger, CCPagerViewControlStyle)
 // 初始轮播图（推荐使用）
 + (instancetype)pagerViewWithFrame:(CGRect)frame placeholderImage:(UIImage *)placeholderImage;
 - (void)reloadData;
-- (void)startAutoScroll;
-- (void)stopAutoScroll;
+- (void)resumeScroll;
+- (void)pauseScroll;
 
 /** 可以调用此方法手动控制滚动到哪一个index */
 - (void)makeScrollViewScrollToIndex:(NSInteger)index;
