@@ -33,11 +33,6 @@
     CGRect rect = CGRectMake(10, 80, w - 20, 180);
     CCPagerView *pageView = [CCPagerView pagerViewWithFrame:rect placeholderImage:[UIImage imageNamed:@"placeholder"]];
     pageView.delegate = self;
-//    pageView.pageControlAligment = CCPagerViewControlAligmentLeft;
-//    pageView.pageControlStyle = CCPagerViewControlStyleCustom;
-//    pageView.currentPageDotColor = [UIColor whiteColor]; // 自定义分页控件小圆标颜色
-//    pageView.autoScrollTimeInterval = 3;
-//    pageView.pageControlDotSize = CGSizeMake(4, 4);
     pageView.layer.masksToBounds = YES;
     pageView.layer.cornerRadius = 5;
     [self addSubview:pageView];
@@ -58,12 +53,12 @@
 
 - (void)cellWillAppear
 {
-    [_pagerView resumeScroll];
+    [_pagerView startAutoScroll];
 }
 
 - (void)cellWillDisappear
 {
-    [_pagerView pauseScroll];
+    [_pagerView stopAutoScroll];
 }
 
 - (void)pagerView:(CCPagerView *)cycleScrollView didSelectItemAtIndex:(NSInteger)index
@@ -84,8 +79,12 @@
     return [CustomCell class];
 }
 
-- (void)configCell:(UICollectionViewCell *)cell forIndex:(NSInteger)index pagerView:(CCPagerView *)view
+- (NSUInteger)numberOfPagerViewCell:(CCPagerView *)pagerView
 {
+    return [_images count];
+}
+
+- (void)configPagerViewCell:(UICollectionViewCell *)cell forIndex:(NSInteger)index pagerView:(CCPagerView *)pagerView {
     CustomCell *myCell = (CustomCell *)cell;
     
     NSString *imageUrl = _images[index];
@@ -97,11 +96,6 @@
     } else { // 本地图片
         myCell.imageView.image = [UIImage imageNamed:_images[index]];
     }
-}
-
-- (NSUInteger)numberOfPagerViewCell:(CCPagerView *)pagerView
-{
-    return [_images count];
 }
 
 @end
